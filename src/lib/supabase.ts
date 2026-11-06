@@ -1,22 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
 /* ------------------------------------------------------------------ */
-/*  Supabase client — global leaderboard backend                       */
-/*  To activate:                                                       */
-/*  1. Create free project at https://supabase.com                    */
-/*  2. New table → SQL Editor → run the setup SQL below               */
-/*  3. Settings → API → copy URL and anon public key                  */
-/*  4. Paste them here (safe — anon key is public by design)          */
+/*  Supabase client — LIVE global leaderboard backend                  */
+/*  Project: supabase-orange-garden (us-east-1)                        */
+/*  Table: leaderboard_entries (created via migration)                 */
 /* ------------------------------------------------------------------ */
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = 'https://fhatidlphelthgwfxtft.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoYXRpZGxwaGVsdGhnd2Z4dGZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1MjcyODksImV4cCI6MjA3NzEwMzI4OX0.xS6DPK-6aCYOu1XHA7MamjHFl2mLs11saMlwPZ0iFbc';
 
-export const isSupabaseActive = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+export const isSupabaseActive = true;
 
-export const supabase = isSupabaseActive
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ------------------------------------------------------------------ */
 /*  SQL to run in Supabase SQL Editor (one-time setup)                 */
@@ -70,7 +65,6 @@ export interface LeaderboardEntry {
 /*  API                                                                */
 /* ------------------------------------------------------------------ */
 export async function submitScore(entry: LeaderboardEntry): Promise<boolean> {
-  if (!supabase) return false;
   try {
     const { error } = await supabase.from('leaderboard_entries').insert({
       player: entry.player.slice(0, 30),
@@ -88,7 +82,6 @@ export async function submitScore(entry: LeaderboardEntry): Promise<boolean> {
 }
 
 export async function fetchGlobalLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
-  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from('leaderboard_entries')
@@ -103,7 +96,6 @@ export async function fetchGlobalLeaderboard(limit = 50): Promise<LeaderboardEnt
 }
 
 export async function fetchPlayerRank(player: string): Promise<number | null> {
-  if (!supabase) return null;
   try {
     const { data, error } = await supabase
       .from('leaderboard_entries')
