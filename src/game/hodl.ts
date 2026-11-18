@@ -4,6 +4,14 @@
 /* ------------------------------------------------------------------ */
 
 import { GameLoop } from "./engine";
+import {
+  blockAfterClear,
+  hpAfterBlockClear,
+  hpAfterHeart,
+  hpAfterHit,
+  satPickupValue,
+  shopCost,
+} from "./rules";
 import { storage } from "./storage";
 import { haptic, getTelegramUser, shareScore } from "../lib/telegram";
 import { submitScore, fetchGlobalLeaderboard, isSupabaseActive, type LeaderboardEntry } from "../lib/supabase";
@@ -249,11 +257,12 @@ export class HodlGame {
   }
 
   private nextBlock() {
-    this.block++;
+    const step = blockAfterClear(this.block, this.mode.winBlocks);
+    this.block = step.block;
     this.killsThisBlock = 0;
     this.quota = this.mode.killQuota(this.block);
-    if (this.mode.healBetween) this.player.hp = Math.min(this.player.maxHp, this.player.hp + 30);
-    if (this.mode.winBlocks && this.block > this.mode.winBlocks) { this.winRun(); return; }
+    this.player.hp = hpAfterBlockClear(this.player.hp, this.player.maxHp, this.mode.healBetween);
+    if (step.outcome === "win") { this.winRun(); return; }
     if (this.mode.upgrades) { this.screen = "shop"; }
     else { this.setBanner(`BLOCK ${this.block}`, PAL.ton); }
     haptic("success");
@@ -463,13 +472,12 @@ export class HodlGame {
       if (dist < p.r + 8) {
         d.on = false;
         if (d.kind === "sat") {
-          const mult = 1 + this.combo * 0.1;
-          const v = Math.floor(5 * mult * (1 + this.block * 0.1));
+          const v = satPickupValue(this.combo, this.block);
           this.stats.sat += v;
           this.float(p.x, p.y - 18, `+${v} SAT`, PAL.gold);
           this.sfx.pickup(); haptic("light");
         } else if (this.mode.id !== "hardcore") {
-          p.hp = Math.min(p.maxHp, p.hp + 20);
+          p.hp = hpAfterHeart(p.hp, p.maxHp, this.mode.id);
           this.float(p.x, p.y - 18, "+20 HP", PAL.green);
           this.sfx.pickup();
         }
@@ -485,7 +493,7 @@ export class HodlGame {
 
   private damagePlayer() {
     const p = this.player;
-    p.hp -= 20;
+    p.hp = hpAfterHit(p.hp);
     p.inv = 0.8;
     this.combo = 0;
     this.shake = 8;
@@ -533,7 +541,7 @@ export class HodlGame {
       { id: "hp", label: "+ MAX HP", sub: `+40 & heal 40`, cost: 0, apply: () => { p.maxHp += 40; p.hp = Math.min(p.maxHp, p.hp + 40); } },
       { id: "spd", label: "+ SPEED", sub: "+40", cost: 0, apply: () => { p.speed += 40; } },
       { id: "sprd", label: "+ SPREAD", sub: "+1 projectile", cost: 0, apply: () => { p.spread += 1; } },
-    ].map((it, i) => ({ ...it, cost: [60, 80, 70, 50, 120][i] + this.block * 10 }));
+    ].map((it, i) => ({ ...it, cost: shopCost(i, this.block) }));
   }
 
   /* ------------------------- buttons ------------------------- */
